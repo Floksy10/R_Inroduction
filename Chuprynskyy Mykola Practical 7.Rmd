@@ -1,0 +1,142 @@
+---
+title: Practical 3
+subtitle: Functions & Formulas
+author: Mykola Chuprynskyy
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    toc: true
+    toc_depth: 2
+  
+---
+
+```{r, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+```
+
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(comment = NA)
+```
+
+***
+
+# 1 Write your own `my_cumsum()` function
+
+The base R function cumsum() returns the cumulative sum of its argument, e.g.
+
+
+```{r}
+cumsum(1:4)
+```
+
+
+a. Write the function `my_cumsum()` that does the same.
+```{r}
+my_cumsum <- function(x) {
+  
+    sum <- cumsum(x)
+    
+  return(sum)
+  }
+
+```
+
+b. Show that the function works for the argument `-1:4`
+```{r}
+my_cumsum(-1:4)
+```
+
+# 2 Bootstrap
+
+a. Source the `bootstrap()` function of the lecture slides.
+```{r}
+bootstrap <- function(formula, data, B = 1000) {  
+  
+  pars   <- lm(formula = formula, data = data) %>% 
+    coef() %>% 
+    names()
+  
+  output <- matrix(nrow = B, ncol = length(pars), 
+                     dimnames = list(NULL, pars))
+  
+  for (i in 1:B) {
+    
+    bootsample  <- slice_sample(.data = data, n = nrow(data), replace = TRUE)
+    
+    bootfit     <- lm(formula = formula, data = bootsample)
+    
+    output[i, ] <- bootfit$coef
+  }
+  
+  return(output)
+}
+```
+
+b. Fit the linear model `mpg ~ disp + drat + qsec` of the `mtcars` data and save the `lm` object as `fit`.
+```{r}
+fit <- lm(mpg ~ disp + drat + qsec, data = mtcars)
+bootstrap_results <- bootstrap(mpg ~ disp + drat + qsec, data = mtcars, B = 1000)
+```
+
+c. Display the summary of this model.
+```{r}
+summary(fit)
+
+```
+
+d. Save the bootstrap object for the same model.
+```{r}
+save(bootstrap_results, file = "bootstrap_results.RData")
+```
+
+e. Make an object with the bootstrap confidence intervals and one with the theoretical confidence intervals, and compare both.
+```{r}
+# Calculate the 95% bootstrap confidence intervals
+bootstrap_ci <- apply(bootstrap_results, 2, function(coefs) {
+  quantile(coefs, probs = c(0.025, 0.975))
+})
+
+# Convert to a more readable format
+bootstrap_ci_df <- as.data.frame(t(bootstrap_ci))
+colnames(bootstrap_ci_df) <- c("Lower", "Upper")
+print("Bootstrap Confidence Intervals:")
+print(bootstrap_ci_df)
+
+# Calculate the 95% theoretical confidence intervals
+theoretical_ci <- confint(fit, level = 0.95)
+
+print("Theoretical Confidence Intervals:")
+print(theoretical_ci)
+
+```
+
+f. In a 2 x 2 plot array, plot the bootstrap sampling distributions of the four parameters in red, and the theoretical sampling distribution of the parameters in blue. For the latter, use `stat_function(fun = dnorm, args = list(mean = ..., sd = ...))`, using the mean and sd values of the corresponding `lm` model estimates.
+```{r}
+
+num_params <- ncol(bootstrap_ci_df)
+
+
+plots <- lapply(1:4, function(i) {
+ 
+  param_index <- ((i - 1) %% num_params) + 1
+  param_mean <- mean(bootstrap_ci_df[[param_index]])
+  param_sd <- sd(bootstrap_ci_df[[param_index]])
+  
+  ggplot() +
+    geom_density(data = data.frame(Value = bootstrap_ci_df[[param_index]]), aes(x = Value), fill = "red", alpha = 0.5, color = "red") +
+    stat_function(fun = dnorm, args = list(mean = param_mean, sd = param_sd), color = "blue") +
+    labs(title = colnames(bootstrap_ci_df)[param_index]) +
+    theme_minimal()
+})
+
+grid.arrange(grobs = plots, ncol = 2)
+```
+
+***
+
+End of practical
