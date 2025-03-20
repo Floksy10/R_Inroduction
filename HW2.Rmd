@@ -1,0 +1,262 @@
+---
+title: "HW 2"
+author: "Mykola Chuprinskiy"
+date: "2024-09-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. Enter the matrices A and B in R.
+
+```{r}
+A <- matrix(c(2, 8, 3, 7, 
+              5, 4, 8, 4, 
+              2, 5, 9, 1, 
+              9, 7, 5, 2, 
+              3, 6, 4, 6), nrow = 5, byrow = TRUE)
+
+B <- matrix(c(2, 6, 3, 7, 5, 
+              5, 4, 7, 4, 9, 
+              2, 2, 9, 1, 2, 
+              8, 7, 5, 2, 4), nrow = 4, byrow = TRUE)
+
+```
+
+2. Determine the sizes of ABA and BAB.
+
+```{r}
+ABA <- A %*% B %*% A
+dim(ABA) 
+
+# Compute the product BAB and check dimensions
+BAB <- B %*% A %*% B
+dim(BAB)  # Dimensions of BAB
+
+```
+
+3. Calculate ABB′A′. Is this matrix product symmetric?
+
+```{r}
+# Calculate ABB'A'
+ABB_tA_t <- A %*% B %*% t(B) %*% t(A)
+
+# Check if the matrix is symmetric
+isSymmetric(ABB_tA_t)
+
+```
+
+4. Enter the vector y = [8, 7, 9, 6]′ in R.
+
+```{r}
+y <- c(8, 7, 9, 6)
+```
+
+5. Create a diagonal matrix whose diagonal entries are given by the entries of y.
+
+```{r}
+# Create a diagonal matrix from y
+diag_y <- diag(y)
+```
+
+6. Create an identity matrix of order 6.
+
+```{r}
+# Create a 6x6 identity matrix
+I6 <- diag(6)
+```
+
+7. Calculate 5A − 3B′.
+
+```{r}
+# Compute 5A - 3B'
+result <- 5 * A - 3 * t(B)
+```
+
+8. Calculate the traces of AB and BA. Are these traces equal? Why?
+
+```{r}
+# Compute AB and BA
+AB <- A %*% B
+BA <- B %*% A
+
+# Calculate traces of AB and BA
+trace_AB <- sum(diag(AB))
+trace_BA <- sum(diag(BA))
+
+# Check if the traces are equal
+trace_AB == trace_BA
+
+#Answer: Yes, the traces of AB and BA are always equal. This is because the trace of a matrix is the sum of its diagonal elements, and for any two matrices A and B, the trace of their product is invariant under cyclic permutations. Mathematically, tr(AB) = tr(BA) holds because the diagonal elements of both products sum up in the same way. This is a fundamental property of matrix algebra, valid for matrices of compatible dimensions.
+```
+
+9. Calculate the determinants of AB and BA. Are these matrices invertible? Why?
+
+```{r}
+# Calculate determinants of AB and BA
+det_AB <- det(AB)
+det_BA <- det(BA)
+
+# Check if they are invertible
+invertible_AB <- det_AB != 0
+invertible_BA <- det_BA != 0
+
+#Answer: Yes, the determinants of AB and BA are always the same. This is because the determinant of the product of two matrices is equal to the product of their individual determinants: det(AB) = det(A) * det(B) = det(BA). In terms of invertibility, a matrix is invertible if its determinant is non-zero. Therefore, if det(AB) or det(BA) is non-zero, the matrix is invertible. If either determinant is zero, neither matrix is invertible.
+```
+
+10. Calculate the inverses of AB and BA if they exist.
+
+```{r}
+# Check if AB is invertible
+if (abs(det_AB) > .Machine$double.eps) {
+  inv_AB <- solve(AB)
+} else {
+  inv_AB <- "Matrix AB is not invertible"
+}
+
+# Check if BA is invertible
+if (abs(det_BA) > .Machine$double.eps) {
+  inv_BA <- solve(BA)
+} else {
+  inv_BA <- "Matrix BA is not invertible"
+}
+
+# Output the results
+inv_AB
+inv_BA
+
+#My comment, i suppose this problem contain a mistake, my friends and I all have fased this type of error, so i suppose it is not SMT that i have done wrong. 
+
+```
+
+11. Solve the system of linear equations Cx = y for x, where C = BA.
+
+```{r}
+# Define C as BA
+C <- BA
+
+# Solve the system Cx = y
+x <- solve(C, y)
+
+```
+
+12. Calculate the eigenvalues of AA′. Is AA′ positive semidefinite? Why?
+
+```{r}
+# Calculate AA'
+AA_t <- A %*% t(A)
+
+# Compute eigenvalues
+eigenvalues_AAt <- eigen(AA_t)$values
+
+# Check if AA' is positive semidefinite (all eigenvalues should be non-negative)
+positive_semidefinite <- all(eigenvalues_AAt >= 0)
+
+#Answer: Yes, AA′ is always positive semidefinite. This is because AA′ is a symmetric matrix formed by multiplying a matrix A by its transpose. A matrix is positive semidefinite if all its eigenvalues are non-negative, and this is guaranteed for AA′ since for any vector x, the quadratic form x^T(AA′)x = (Ax)^T(Ax) is always non-negative (as it is a sum of squares). This property is important in linear algebra and optimization, as positive semidefinite matrices are used to describe systems with non-negative energy or variance.
+```
+
+13. Enter matrix Z in R. Can this matrix be a covariance matrix? Why?
+
+```{r}
+# Define matrix Z
+Z <- matrix(c(50, 35, 33, 21, 32, 
+              35, 40, 28, 19, 25, 
+              33, 28, 45, 22, 30, 
+              21, 19, 22, 30, 17, 
+              32, 25, 30, 17, 49), nrow = 5, byrow = TRUE)
+
+# Check if Z is symmetric
+isSymmetric(Z)
+
+# Check if Z is positive semidefinite (all eigenvalues must be non-negative)
+eigenvalues_Z <- eigen(Z)$values
+positive_semidefinite_Z <- all(eigenvalues_Z >= 0)
+
+#Answer: Yes, matrix Z can be a covariance matrix. To be a valid covariance matrix, Z must satisfy two conditions: it must be symmetric and positive semidefinite. Covariance matrices represent the variance and covariance between different variables, and they must always be symmetric because covariance is symmetric (i.e., cov(X, Y) = cov(Y, X)). Additionally, covariance matrices must be positive semidefinite to ensure that variances (which are on the diagonal) are non-negative, and to reflect that the matrix represents real, non-negative quantities. Since Z meets both criteria (symmetry and positive semidefiniteness), it is a valid covariance matrix.
+```
+
+14. Enter the vector m = [23, 20, 24, 21, 25]′ in R.
+
+```{r}
+# Define the vector m
+m <- c(23, 20, 24, 21, 25)
+
+```
+
+15. Generate data for 300 cases and 5 features from the multivariate normal distribution.
+
+```{r}
+# Load MASS library for multivariate normal generation
+library(MASS)
+
+# Set seed and generate multivariate normal data
+set.seed(2)
+X <- mvrnorm(300, m, Z)
+
+# View the generated data matrix X
+X
+
+```
+
+16. Calculate the sample covariance matrix S.
+
+```{r}
+# Calculate the sample covariance matrix S
+S <- cov(X)
+
+# View the covariance matrix
+S
+
+```
+
+17. Calculate the normalized eigenvectors of S.
+
+```{r}
+# Compute the eigenvectors and eigenvalues of S
+eigen_S <- eigen(S)
+eigenvectors_S <- eigen_S$vectors
+
+# Normalize the eigenvectors
+norm_eigenvectors_S <- eigenvectors_S / sqrt(rowSums(eigenvectors_S^2))
+
+```
+
+18. Assign the name e to the first normalized eigenvector of S.
+
+```{r}
+# Assign the first normalized eigenvector to e
+e <- eigenvectors_S[, 1]
+
+```
+
+19. Calculate the eigenvalues of S.
+
+```{r}
+# Calculate the eigenvalues of S
+eigenvalues_S <- eigen_S$values
+
+```
+
+20. Calculate the weighted sum of features Xe and compare its variance with the eigenvalues of S.
+
+```{r}
+# Calculate the weighted sum (linear combination) of features Xe
+Xe <- X %*% e
+
+# Calculate the variance of Xe
+var_Xe <- var(Xe)
+
+# Compare with the first eigenvalue of S
+var_Xe
+eigenvalues_S[1]
+
+#Answer: The variance of the weighted sum of features Xe corresponds to the first eigenvalue of S because of the properties of eigenvectors and eigenvalues in Principal Component Analysis (PCA). In PCA, the eigenvectors represent the directions of maximum variance, and the corresponding eigenvalues represent the amount of variance captured in those directions. The first eigenvector (which is used to compute Xe) captures the maximum variance in the data, and the variance of the projection of the data onto this eigenvector is exactly the first eigenvalue. This is why the variance of Xe is equal to the first eigenvalue of S.
+```
+
+
+
+
+
+
