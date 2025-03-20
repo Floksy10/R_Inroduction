@@ -1,0 +1,107 @@
+---
+title: "HW1"
+author: "Mykola Chuprinskiy"
+date: "2024-09-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# This will plot the item frequencies and print out the top 3 most frequent items sold.
+## Load necessary libraries
+
+```{r}
+library(arules)
+library(arulesViz)
+```
+
+## Import the data
+```{r}
+DAT <- read.table('Online Retail BIM.dat', header = TRUE)
+```
+
+## Convert the data to a matrix, excluding the invoice numbers
+```{r}
+BIM <- as.matrix(DAT[-1])
+```
+
+## Convert the matrix to a 'transactions' class
+```{r}
+BIM <- as(BIM, "transactions")
+```
+
+## Plot relative item frequency (support)
+```{r}
+itemFrequencyPlot(BIM, topN = 20, type = "relative", main = "Relative Item Frequency Plot")
+```
+
+## To determine the top 3 items with the highest support
+```{r}
+item_support <- itemFrequency(BIM, type = "absolute")
+top_3_items <- sort(item_support, decreasing = TRUE)[1:3]
+top_3_items
+```
+
+
+# Determine which two association rules containing only two items have the highest support.
+```{r}
+# Apply the apriori algorithm
+rules <- apriori(BIM, parameter = list(supp = 0.01, conf = 0.5, minlen = 2, maxlen = 2))
+
+# Sort the rules by support and inspect the top 2
+sorted_rules <- sort(rules, by = "support", decreasing = TRUE)
+inspect(sorted_rules[1:2])
+
+```
+
+# How many items does the association rule with the highest confidence contain?
+```{r}
+rules_by_conf <- sort(rules, by = "confidence", decreasing = TRUE)
+
+inspect(rules_by_conf[1])
+
+length(rules_by_conf[1]@lhs) + length(rules_by_conf[1]@rhs)
+
+```
+
+# Which items are important antecedents of item 4050? What does this mean?
+```{r}
+rules_4050 <- apriori(BIM, parameter = list(supp = 0.01, conf = 0.5), 
+                      appearance = list(lhs = 'i4050', default = "rhs"))
+inspect(rules_4050)
+
+sorted_rules_4050 <- sort(rules_4050, by = "confidence", decreasing = TRUE)
+sorted_rules_4050[1:2]
+
+```
+
+# Which items are important consequents of item 1655? What does this mean?
+```{r}
+rules_1655 <- apriori(BIM, parameter = list(supp = 0.01, conf = 0.5),
+                      appearance = list(lhs = "i1655", default = "rhs"))
+inspect(rules_1655)
+
+sorted_rules_1655 <- sort(rules_1655, by = "confidence", decreasing = TRUE)
+inspect(sorted_rules_1655[1:3])
+
+```
+
+# Are there two items that are substitutes for each other? Why?
+```{r}
+substitute_rules <- subset(rules, lift < 1.1)
+inspect(substitute_rules)
+
+```
+
+# Make a scatter plot and a two-key plot for association rules with minimum support 0.01 and minimum confidence 0.5.
+```{r}
+rules_viz <- apriori(BIM, parameter = list(supp = 0.01, conf = 0.5))
+
+plot(rules_viz, method = "scatterplot", measure = c("support", "confidence"), shading = "lift")
+
+plot(rules_viz, method = "two-key plot")
+
+```
+
+
