@@ -1,0 +1,117 @@
+---
+title: "HW 5"
+author: "Mykola Chuprinskiy"
+date: "2024-10-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,          # Show code in output for reproducibility
+  message = FALSE,      # Suppress messages from packages
+  warning = FALSE,      # Suppress warnings
+  fig.align = "center", # Center figures
+  fig.width = 7,        # Set default figure width
+  fig.height = 5,       # Set default figure height
+  comment = NA,         # Remove comment prefixes from output
+  fig.cap = "Figure"    # Add default caption for figures
+)
+```
+
+The Macroeconomic variables, both real and financial, do have considerable influence, positive as well as negative, on the performance of the corporate sector of the economy. Consequently, the stock markets of the economy got affected by such performance. The movement of stock prices, apart from the firms’ fundamentals, also depends upon the level of development achieved in the economy and its integration towards the world economy. Since macroeconomic variables are highly interdependent, using all of them as explana- tory variables in affecting the stock market may pose a severe multicolinearity problem and it becomes difficult to delineate the separate affects of different variables on the stock mar- ket movement. Deriving basic factors from such macroeconomic variables and employing these factors in pricing models can provide valuable information about the contents of priced factors in different stock markets. Generating orthogonal factor realizations elimi- nates the multicolinearity problem in estimating factor regression coefficients and serves to find the factors that are rewarded by the market. In this assignment, such factors will be extracted from twelve macroeconomic variables in India. The variables are: 1. Money Supply (MS), 2. Consumer Price Index (CPI), 3. Gold Prices (GP), 4. Crude Oil Prices (COP), 5. Foreign Exchange Reserves (FER), 6. Foreign Direct Investment (FDI), 7. Foreign Institutional Investment (FII), 8. Call Money Rate (CMR), 9. Balance of Trade (BOT), 10. Foreign Exchange Rate (ER), 11. Repo Rate (Repo), 12. Industrial Growth Rate (IGR). The standardized observations in the data file IndianSM.txt are based on monthly aver- ages, for 149 months.
+
+```{r}
+library(psych)
+library(e1071)
+library(fastICA)
+
+IndianSM <- read.table("IndianSM.txt", header=TRUE)
+```
+
+(a) Factor analyze the data and determine how many common factors are at least needed
+to explain at least 80% of the total variance.
+```{r}
+IndianSM_standardized <- scale(IndianSM)
+
+fa_analysis <- fa(IndianSM_standardized, nfactors=12, rotate="none")  
+
+print(fa_analysis$Vaccounted)
+```
+To explain at least 80% of the total variance, a minimum of three common factors are required. Specifically, the combined contribution of factors MR1, MR2, and MR3 accounts for 83.90% of the total variance, surpassing the 80% threshold. Thus, these three factors are sufficient to meet the variance requirement.
+
+
+(b) Does the factor model with the in (a) selected number of common factors fit to the
+data? Why?
+```{r}
+#nfactors = 3 bcs 3 are enough to explain 80%
+
+fa_selected <- fa(IndianSM_standardized, nfactors=3, rotate="varimax")
+print(fa_selected)
+cat("Goodness of Fit for 3 factors model:\n")
+print(fa_selected$STATISTIC)
+```
+The cumulative variance of 80% suggests a reasonably good fit for the model. Additionally, the low RMSR value of 0.03 further supports this, indicating a strong model fit. The factor correlations between MR1, MR2, and MR3 are relatively high, which implies that the factors are not completely independent and that there is some overlap in the variance they explain. Despite this, the small residuals observed indicate that the model provides a close approximation to the actual data. Therefore, the selection of three factors appears to be a good fit for the dataset.
+
+(c) Give the correlations between the ‘regression’ factor scores, given the in (a) selected
+number of common factors.
+```{r}
+fa_factanal <- factanal(IndianSM_standardized, factors = 3, scores = "regression")
+cor(fa_factanal$scores)  
+```
+
+(d) Carry out an independent component analysis and determine the number of inde-
+pendent components. How many independent components do you select? Why?
+```{r}
+ica_result <- fastICA(IndianSM_standardized, n.comp=12, maxit=1000, tol=0.0001)  
+
+print(ica_result$S) 
+
+cov_ica <- cov(ica_result$S)
+
+eigenvalues <- eigen(cov_ica)$values
+print(eigenvalues) 
+
+IndianSM_pca <- prcomp(IndianSM_standardized, center = TRUE, scale. = TRUE)
+screeplot(IndianSM_pca, type = "lines", main = "Scree Plot of PCA")
+```
+To determine the number of independent components, I initially examined the eigenvalues. However, since the eigenvalues turned out to be uniform, I shifted my focus to kurtosis values, which can also help identify independent components. Upon reviewing the kurtosis values, three components stood out with values greater than 1, suggesting they are more independent and non-Gaussian, aligning with the goals of ICA. Additionally, the scree plot revealed a flattening of the curve after the third component, indicating that additional components contribute very little to explaining variance. Based on this analysis, selecting three independent components is justified.
+
+
+(e) Give the correlations between the features (macro-economic variables) and the in-
+dependent components. Use these correlations to interpret the independent compo-
+nents.
+
+```{r}
+ica_result <- fastICA(IndianSM_standardized, n.comp=3, maxit=1000, tol=0.0001)
+
+cor_ica <- cor(IndianSM, ica_result$S)
+print(cor_ica)
+
+cor_factors_selected <- cor(IndianSM, fa_selected$scores)
+cor_factors_factanal <- cor(IndianSM, fa_factanal$scores)
+
+heatmap(cor_ica, main="Correlations between Macroeconomic Variables and Independent Components (ICA)")
+
+heatmap(cor_factors_selected, main="Correlations between Macroeconomic Variables and Factor Scores (FA)")
+
+cor_ICA <- cor(IndianSM, ica_result$scores)
+cor_ICA
+
+cor_factors <- cor(IndianSM, fa_factanal$scores)
+cor_factors
+
+cor_factors_selected
+
+heatmap(cor_factors, main="Correlations between Macroeconomic Variables and Independent Components")
+```
+
+
+Factor 1 (MR1) shows high positive loadings with variables such as Money Supply (MS), Consumer Price Index (CPI), Gold Prices (GP), Crude Oil Prices (COP), Foreign Exchange Reserves (FER), Foreign Direct Investment (FDI), and Foreign Institutional Investment (FII). These are key indicators of general economic activity, monetary policy, and inflation. Therefore, MR1 likely represents an economic growth and monetary supply factor, as it is heavily influenced by variables typically associated with overall economic activity and monetary conditions.
+Factor 2 (MR2) displays high positive values for Foreign Exchange Rate (ER) and negative values for Industrial Growth Rate (IGR) and Balance of Trade (BOT). This suggests that MR2 is a trade and currency factor, driven by fluctuations in exchange rates and trade balances, which are inversely related to industrial growth in this case.
+Factor 3 (MR3) has high positive loadings for Call Money Rate (CMR) and Repo Rate (Repo), both of which are key interest rates controlled by monetary authorities. Thus, MR3 appears to be a monetary policy factor, as it is strongly influenced by interest rate policies.
+
+
+ Independent Component Analysis (ICA):
+IC1 has strong negative correlations with Call Money Rate (CMR) (-0.919), Repo Rate (Repo) (-0.912), and Foreign Exchange Rate (ER) (-0.309). These variables are crucial indicators of monetary policy and liquidity. The strong negative correlations suggest that IC1 likely represents monetary tightening, as these variables are typically associated with restrictive monetary policy aimed at controlling liquidity.
+IC2 exhibits a high positive correlation with the Foreign Exchange Rate (ER) (0.751) and negative correlations with Foreign Direct Investment (FDI) (-0.608), Industrial Growth Rate (IGR) (-0.803), and Crude Oil Prices (COP) (-0.491). These correlations indicate that IC2 likely reflects an external trade and industrial performance factor, highlighting the relationship between exchange rates, industrial growth, and external trade performance.
+IC3 shows strong negative correlations with Money Supply (MS) (-0.981), Consumer Price Index (CPI) (-0.976), Gold Prices (GP) (-0.962), Crude Oil Prices (COP) (-0.802), and Foreign Exchange Reserves (FER) (-0.921), while displaying a strong positive correlation with Balance of Trade (BOT) (0.911). These relationships suggest that IC3 is linked to monetary conditions, inflation, and economic growth, as it incorporates variables that are critical to understanding the monetary environment and inflationary pressures.
