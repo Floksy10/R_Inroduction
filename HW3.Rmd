@@ -1,0 +1,86 @@
+---
+title: "HW 3"
+author: "Mykola Chuprinskiy"
+date: "2024-09-26"
+output: html_document
+---
+
+```{r, message=FALSE, warning=FALSE}
+library(ISLR)
+
+nci.labs <- NCI60$labs
+nci.data <- NCI60$data
+
+# Check dimensions
+dim(nci.data)
+
+# Check the cancer type labels
+nci.labs[1:4]
+table(nci.labs)
+```
+
+```{r}
+# Complete linkage clustering
+hc.complete <- hclust(dist(nci.data), method = "complete")
+
+# Single linkage clustering
+hc.single <- hclust(dist(nci.data), method = "single")
+
+# Average linkage clustering
+hc.average <- hclust(dist(nci.data), method = "average")
+
+# Plot dendrograms
+par(mfrow = c(1, 3))
+plot(hc.complete, main = "Complete Linkage", xlab = "", sub = "", cex = 0.5)
+plot(hc.single, main = "Single Linkage", xlab = "", sub = "", cex = 0.5)
+plot(hc.average, main = "Average Linkage", xlab = "", sub = "", cex = 0.5)
+```
+Q(a): Yes, the choice of linkage affects the clustering results. The complete linkage tends to produce more compact clusters, single linkage often results in long chains, and average linkage produces clusters that are in between the extremes of complete and single linkage. Therefore, the choice of linkage influences the shape and distribution of the clusters.
+
+Q(b): Cell lines within a single cancer type often tend to cluster together because they share similar gene expression patterns, which results in smaller dissimilarities in the clustering.
+
+```{r}
+# Standardize the data
+sd.data <- scale(nci.data)
+
+# Perform hierarchical clustering on standardized data
+hc.scaled.complete <- hclust(dist(sd.data), method = "complete")
+
+# Plot the dendrogram
+par(mfrow = c(1, 1))
+plot(hc.scaled.complete, main = "Hierarchical Clustering with Scaled Data", xlab = "", sub = "")
+
+```
+Q(c): Scaling the variables changes the influence of each gene expression measurement in the clustering. Without scaling, variables with larger variances dominate the distance calculation. Scaling ensures that each variable contributes equally, which may lead to more balanced and meaningful clusters. In most cases, scaling is advisable when variables are on different scales or have varying variances.
+
+```{r}
+# Cut dendrogram to obtain 4 clusters
+hc.clusters <- cutree(hc.scaled.complete, 4)
+
+# Compare clusters with cancer types
+table(hc.clusters, nci.labs)
+
+```
+
+Q(d) The table reveals that certain cancer types cluster together. For example, the breast cancer cell lines tend to fall into one cluster, while other cancer types like melanoma may be spread across multiple clusters, indicating differences in expression patterns within the type.
+
+
+```{r}
+# Visualize the cut that produces 4 clusters
+plot(hc.scaled.complete, labels = nci.labs, main = "Dendrogram with 4 Clusters")
+abline(h = 139, col = "red")
+```
+
+```{r}
+# Set seed for reproducibility
+set.seed(2)
+
+# Perform K-means clustering
+km.out <- kmeans(sd.data, centers = 4, nstart = 20)
+km.clusters <- km.out$cluster
+
+# Compare K-means clusters with hierarchical clusters
+table(km.clusters, hc.clusters)
+
+```
+Q(e): The comparison between the hierarchical and K-means clustering results shows some level of agreement between the two methods. However, differences can arise because hierarchical clustering is based on the dissimilarity matrix and linkage method, while K-means relies on minimizing within-cluster variance. Therefore, the clusters identified by each method may not always align perfectly.
