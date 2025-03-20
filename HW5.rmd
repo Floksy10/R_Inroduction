@@ -1,0 +1,263 @@
+---
+title: "Assignment 5"
+author: Berk Yılmaz
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: true
+    toc_depth: 4
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment
+
+Write all your text and R code in an R markdown file and compile an html file whose ZIP
+file can be handed in on Blackboard.
+
+# 1. Non-negative matrix factorization
+
+In this part of the assignment, non-negative matrix factorization (NMF) is used to once
+again learn the components which drive the stock market. Now, instead of the closing
+prices, the numbers of shares traded for 5 recent years for 505 companies currently found
+on the S&P 500 index, are used. 
+
+The data for this exercise can be found in the file: volume stocks.dat. The first
+feature in this data file is name and gives an abbreviation of the company name. The
+features named v1 to v1259 are the numbers of shares traded on 1259 days within 5 recent
+years.
+
+Import the data into R. Be aware that the data file is tab-delimited and that the first
+line in the data file contains the feature names. The feature name (the first column) is not
+relevant for the analysis and should be removed. Certain companies have missing values.
+Remove the companies with missing values and only use the complete cases (companies).
+Next, store the data in a matrix.
+
+Apply NMF to the data matrix. Determine the dimension using the proportion of
+explained variance.
+
+```{r}
+# Importing and tidying the dataset
+data <- read.delim("volume_stocks.dat", header = TRUE)
+cleaned_data <- na.omit(data)
+data_matrix <- as.matrix(cleaned_data[ , -1])
+
+# Checking that the values are non-negative, as this is a requirement in Non-Negative Matrix Factorization
+data_matrix[data_matrix < 0] <- 0
+```
+
+---
+
+## (a) How many dimensions do you select?
+```{r}
+library(NMF)
+
+# Applying Non-negative Matrix Factorization
+# We decide the number of components
+rank_range <- 1:10
+n <- length(rank_range)
+explained_variance <- numeric(n)
+proportion_explained_variance <- numeric(n)
+
+# Defining the total variance
+total_variance <- sum(data_matrix^2)
+
+# Defining the reconstructed matrix
+reconstructed_matrix <- vector("list", n)
+
+for (i in rank_range) {
+  nmf_result <- nmf(data_matrix, i)
+
+  reconstructed_matrix[[i]] <- fitted(nmf_result)
+  explained_variance[i] <- sum(reconstructed_matrix[[i]]^2)
+  proportion_explained_variance[i] <- explained_variance[i] / total_variance
+}
+
+# Now we plot it
+plot(rank_range, proportion_explained_variance, type = "o", pch = 16, lty = 1,
+     col = "blue", main = "Proportion of Explained Variance vs. Number of Components",
+     xlab = "Number of Components (r)", ylab = "Proportion of Explained Variance",
+     ylim = c(0, 1))
+grid()
+
+```
+
+
+To determine the number of dimensions, we can look at the rank set in Non-Negative Matrix Factorization:
+```{r}
+rank_selected <- 6
+cat("Selected number of dimensions (rank):", rank_selected)
+```
+
+
+## (b) Give the proportion of explained variance for this number of dimensions
+```{r}
+# Now we want to see the proportion of explained variance
+cat("Proportion of explained variance:", proportion_explained_variance[rank_selected])
+```
+
+## (c) Give the reconstruction error for this number of dimensions
+```{r}
+# I will be looking at the reconstruction error
+nmf_result_selected <- nmf(data_matrix, rank_selected)
+reconstructed_matrix_selected <- fitted(nmf_result_selected)
+reconstruction_error_selected <- sqrt(sum((data_matrix - reconstructed_matrix_selected)^2))
+cat("Reconstruction error:", reconstruction_error_selected, "\n")
+```
+
+## (d) Calculate the correlation matrix of the finally selected dimensions
+```{r}
+# Now we are asked to find the correlation matrix 
+W <- basis(nmf_result_selected)
+H <- coef(nmf_result_selected)
+correlation_matrix_selected <- cor(W)
+cat("Correlation matrix:", correlation_matrix_selected)
+```
+## (e) Calculate the values of Hoyer’s sparseness coefficient for the features matrix and the coefficients matrix.
+
+```{r}
+# We will now define a function that will calculate the Hoyer's sparseness coefficient by using the formula
+sparseness <- function(X) {
+  n <- length(X)
+  numerator <- sqrt(n) - sum(abs(X)) / sqrt(sum(X^2))
+  denominator <- sqrt(n) - 1
+  return(numerator / denominator)
+}
+
+W_sparseness <- sparseness(as.vector(W))
+H_sparseness <- sparseness(as.vector(H))
+
+cat("Hoyer's sparseness coefficient for W matrix:", W_sparseness, "\n")
+cat("Hoyer's sparseness coefficient for H matrix:", H_sparseness, "\n")
+```
+
+## (f) Produce heat maps for the features matrix and the coefficients matrix
+```{r}
+library(pheatmap)
+
+# Heat map for the features matrix W
+pheatmap(W, main = "Heat Map of Features Matrix W", cluster_rows = FALSE, cluster_cols = FALSE)
+
+# Heat map for the coefficients matrix H
+pheatmap(H, main = "Heat Map of Coefficients Matrix H", cluster_rows = FALSE, cluster_cols = FALSE)
+```
+
+# 2. Probabilistic latent semantic analysis
+In this part of the assignment, probabilistic latent semantic analysis is applied to the data
+file benthos.txt. The data set consists of abundances of 10 marine species near an oilfield
+in the North Sea at 13 sites (the columns in the data file). The first 11 columns give the
+data for polluted sites. The last two columns give the data for unpolluted reference sites.
+Import the data into R and store the data as a matrix.
+
+```{r}
+# Importing and tidying of the data
+library(topicmodels)
+library(tm)
+
+data_2 <- read.delim("benthos.txt", header = F)
+data_matrix_2 <- as.matrix(data_2)
+data_matrix_2[data_matrix_2 < 0] <- 0
+
+dtm_2 <- as.DocumentTermMatrix(Matrix::Matrix(data_matrix_2, sparse = TRUE), weighting = weightTf)
+```
+
+
+Carry out a probabilistic latent semantic analysis. Use the proportion of explained
+variance to determine the number of latent classes.
+
+```{r}
+# We define the range for the number of latent classes
+num_latent_classes <- 2:10
+n_2 <- length(num_latent_classes)  # Define n_2 as the length of the number of latent classes
+
+# Now we initialize vectors to store the explained variance for each number of latent classes
+explained_variance_2 <- numeric(n_2)
+proportion_explained_variance_2 <- numeric(n_2)
+
+# Now we find the total variance based on the normalized data
+total_variance <- sum((data_matrix_2 - mean(data_matrix_2))^2)
+
+# Now we perform a loop through different latent classes
+for (i_2 in 1:n_2) {
+  # Perform probabilistic latent semantic analysis using LDA
+  plsa_model <- LDA(dtm_2, k = num_latent_classes[i_2], method = "VEM")
+  posterior_lda <- posterior(plsa_model)
+  
+  # Reconstruct the matrix using the posterior distributions
+  reconstructed_matrix <- posterior_lda$topics %*% posterior_lda$terms
+  
+  # Normalize the original data matrix and the reconstructed matrix
+  data_matrix_2 <- scale(data_matrix_2, center = TRUE, scale = TRUE)
+  reconstructed_matrix <- scale(reconstructed_matrix, center = TRUE, scale = TRUE)
+  
+  # Now we find the residual variance, which is the difference between the original matrix and the reconstructed matrix
+  residual_variance <- sum((data_matrix_2 - reconstructed_matrix)^2)
+  
+  # Calculate the explained variance for the current number of latent classes
+  explained_variance_2[i_2] <- total_variance - residual_variance
+  proportion_explained_variance_2[i_2] <- explained_variance_2[i_2] / total_variance
+}
+
+# Now we make the plot !
+plot(num_latent_classes, proportion_explained_variance_2, type = "b",
+     xlab = "Number of Latent Classes",
+     ylab = "Proportion of Explained Variance",
+     main = "Explained Variance vs Latent Classes")
+
+```
+
+
+## (a) How many latent classes do you select? Why?
+```{r}
+# We select 4
+optimal_latent_classes <- 4 
+cat("Number of latent classes selected:", optimal_latent_classes)
+```
+
+I selected 4 latent classes because when we look at the graph, visually up until 4 latent classes adding each latent class increases the total variance explained by a large margin, but after 4 each latent class shows diminishing returns after being added. Therefore, 4 is the optimal number of latent classes.
+
+## (b) What is the proportion of variance explained for the number of latent classes selected?
+```{r}
+# The proportion of variance explained for 4 latent classes is
+cat("The proportion of variance explained for 4 latent classes:", proportion_explained_variance_2[optimal_latent_classes])
+```
+
+## (c) Produce the three matrices U, Σ, and V' for the number of latent classes selected
+```{r}
+library(topicmodels)
+library(tm)
+
+# I will convert it to a Document Term Matrix because otherwise it does not work
+dtm <- DocumentTermMatrix(Matrix::Matrix(data_matrix_2, sparse = TRUE))
+
+# Now, LDA with 4 classes
+optimal_latent_classes <- 4
+lda_model_optimal <- LDA(dtm, k = optimal_latent_classes, method = "VEM")
+
+# Posterior results to find U and V'
+posterior_lda_optimal <- posterior(lda_model_optimal)
+U <- posterior_lda_optimal$topics
+V_prime <- posterior_lda_optimal$terms
+
+# Sigma
+sigma <- diag(sqrt(colSums(U)))
+
+cat("Matrix U (document-topic matrix):\n")
+print(U)
+cat("Matrix Σ (singular value matrix):\n")
+print(sigma)
+cat("Matrix V' (term-topic matrix):\n")
+print(V_prime)
+
+```
+## (d) Produce the matrix of estimated multinomial probabilities for the number of latent classes selected
+```{r}
+P_w_given_d <- U %*% V_prime
+
+# The matrix of estimated multinomial probabilities
+cat("Matrix of estimated multinomial probabilities (P(w | d)):\n")
+print(P_w_given_d)
+```
+
