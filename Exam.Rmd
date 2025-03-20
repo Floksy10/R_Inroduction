@@ -1,0 +1,212 @@
+---
+title: "Exam"
+subtitle: "INTRODUCTION TO R"
+author: "Mykola Chuprynskyy"
+date: "2024"
+output:
+  prettydoc::html_pretty:
+    theme: hpstr
+    toc: true
+    toc_depth: 2
+
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+
+# 1 Guidelines (5 points)
+
+Reproduce this HTML (including the guidelines), make the exercises and submit the **Rmd** file to Blackboard.
+
+By following the guidelines below you can score 5 points:
+
+* write your R code according to the style guides (1)
+
+* resize plots if they are not approximately square (1)
+
+* use the pipe operator to avoid making unnecessary objects (1)
+
+* insert the image as in the original (1/2)
+
+* suppress all R messages/warnings from being printed in the HTML (1/2)
+
+* format the text as in the original (1/2)
+
+* define the correct theme, the TOC and the section numbers in the YAML (1/2)
+
+Success!!!
+
+# 2 Data types (3 points)
+
+a. Display the matrix shown below. To randomly generate the same logical values set the seed to 1. (1 point)
+
+```{r}
+set.seed(1) 
+logical_matrix <- matrix(sample(c(TRUE, FALSE), 40, replace = TRUE), nrow = 4, ncol = 10)
+
+# Assign row names 'a' to 'd'
+rownames(logical_matrix) <- letters[1:4]
+
+# Assign column names 'X1' to 'X10'
+colnames(logical_matrix) <- paste0("X", 1:10)
+
+# Display the matrix
+logical_matrix
+
+```
+
+b. Display the data object shown below. (1 point)
+```{r}
+df <- data.frame(X = 1:2, B = letters[1:2])  
+rownames(df) <- letters[1:2] 
+df
+
+
+```
+
+c. Display the data object shown below. (1 point)
+```{r}
+data_object <- list(
+  x = seq(-10, 10, by = 2),
+  `length(x)` = length(seq(-10, 10, by = 2))
+)
+
+data_object
+
+```
+
+The remaining exercises use the `starwars` data from the `dplyr` package. So …
+
+```{r echo=FALSE, fig.align='center', out.width="30%", out.height="35%"}
+knitr::include_graphics("image.png")
+```
+
+# 3 Data exploration/manipulation (5 points)
+
+a. Deselect the variables in `starwars` that are of class `list`. Overwrite the data and do not display the result. (1 point)
+```{r}
+starwars <- starwars %>% 
+  select(where(~ !is.list(.)))
+
+```
+
+b. Display the frequencies of the hair colors of the human species. (1 point)
+```{r}
+human_hair_colors <- starwars %>%
+  filter(species == "Human") %>%
+  count(hair_color, sort = TRUE)
+
+
+human_hair_colors
+
+```
+
+c. Change the hair color names “auburn, grey” and “auburn, white” into “auburn”, “blonde” into “blond” and “brown, grey” into “grey”. Overwrite the data and do not display the result. (1 point)
+```{r}
+starwars <- starwars %>%
+  mutate(hair_color = case_when(
+    hair_color %in% c("auburn, grey", "auburn, white") ~ "auburn",
+    hair_color == "blond" ~ "blonde",
+    hair_color == "brown, grey" ~ "grey",
+    TRUE ~ hair_color
+  ))
+
+```
+
+d. With a single pipeline, display the means and frequencies of `height` for the species “Human” and “Gungan”, excluding the cases with missing values. (2 points)
+```{r}
+species_stats <- starwars %>%
+  filter(species %in% c("Human", "Gungan"), !is.na(height)) %>%
+  group_by(species) %>%
+  summarise(
+    mean_height = mean(height, na.rm = TRUE),
+    frequency = n()
+  )
+
+
+species_stats
+
+```
+
+# 4 Data visualization (5 points)
+
+a. Display a histogram of `mass` with 20 bins and the x-axis converted to a logarithmic scale. Remove the cases with missing values from the plot. (1 point)
+```{r}
+
+ggplot(starwars %>% filter(!is.na(mass)), aes(x = mass)) +
+  geom_histogram(bins = 20) +
+  scale_x_log10() +
+  labs(x = "Mass (log scale)", y = "Frequency") +
+  ggtitle("Histogram of Mass with Logarithmic Scale")
+
+```
+
+b. In a 1 x 2 plot array display two plots, one that shows the distribution of `sex` within categories of `hair_color` and one that shows the distribution of `height` within the categories of `eye_color`. Use an appropriate geom, and make sure that the axes labels are readable. (2 point)
+```{r}
+p1 <- ggplot(starwars, aes(x = hair_color, fill = sex)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Hair Color", y = "Count", fill = "Sex")
+
+p2 <- ggplot(starwars, aes(x = eye_color, y = height)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Eye Color", y = "Height")
+
+library(gridExtra)
+grid.arrange(p1, p2, ncol = 2)
+
+```
+
+c. Remove cases with a `mass` larger than 1000 from the data, and display a scatter plot that shows the relationship between `height`, `mass` and `gender`. Use the theme `light`. (2 points)
+```{r}
+ggplot(starwars %>% filter(mass <= 1000, !is.na(height), !is.na(mass)), 
+       aes(x = height, y = mass, color = gender)) +
+  geom_point() +
+  labs(x = "Height", y = "Mass", color = "Gender") +
+  ggtitle("Scatter Plot of Height and Mass by Gender") +
+  theme_light()
+
+```
+
+# 5 Linear Model (3 points)
+
+Display the coefficients of the linear model predicting `mass` from `height` and `sex`. Which category of `sex` has the lowest predicted mass? (1 point)
+```{r}
+
+model <- lm(mass ~ height + sex, data = starwars)
+
+summary(model)$coefficients
+
+
+```
+**Answer: Male is the lowest one**
+
+b. In a 2 x 2 plot array, display the residual plots of this model. (1 point)
+```{r}
+par(mfrow = c(2, 2))  
+plot(model) 
+
+```
+
+c. Answer the questions below about the assumptions of the model. (1 point)
+
+    
+    - The Normal Q-Q plot shows that the assumption of normality is satisfied/violated, because if the residuals are normally distributed, the points will lie approximately along a straight line.
+
+    + The Residuals vs Fitted plot shows that the assumption of homoscdasticity is satisfied/violated, because if the residuals have constant variance (homoscedasticity), the points will be randomly dispersed around a horizontal line without a distinct pattern.
+
+    + The Residuals vs Fitted plot shows that the assumption of linearity is satisfied/violated, because if the relationship is linear, the points will be randomly dispersed around a horizontal line without showing any systematic structure.
+
+***
+
+END OF EXAM
+
+Submit your Rmd file to Blackboard.
