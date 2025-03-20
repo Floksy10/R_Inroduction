@@ -1,0 +1,87 @@
+---
+title: "HW4"
+author: "Mykola Chuprinskiy"
+date: "2024-10-02"
+output: html_document
+---
+```{r setup, include=FALSE}
+# Set global chunk options for better appearance
+knitr::opts_chunk$set(
+  echo = TRUE,          # Show code in output for reproducibility
+  message = FALSE,      # Suppress messages from packages
+  warning = FALSE,      # Suppress warnings
+  fig.align = "center", # Center figures
+  fig.width = 7,        # Set default figure width
+  fig.height = 5,       # Set default figure height
+  comment = NA,         # Remove comment prefixes from output
+  fig.cap = "Figure"    # Add default caption for figures
+)
+```
+
+# Task 
+
+```{r, message=FALSE}
+# Load necessary libraries (base dataset mtcars is pre-loaded)
+# Setting up global chunk options
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+# Perform PCA, excluding columns 8 and 9
+mtcars.pca <- prcomp(mtcars[, c(1:7, 10, 11)], center = TRUE, scale. = TRUE)
+
+# Summary of PCA
+summary(mtcars.pca)
+
+# a) The summary of the PCA output will show the proportion of variance explained by each principal component (PC). The first row in the summary() output indicates the percentage of total variance explained by PC1.
+
+# b) The cumulative proportion of variance explained by PC1, PC2, and PC3 can be found in the Cumulative Proportion row of the summary() output. It represents the combined variance captured by these three components.
+```
+
+```{r}
+# c) According to the "Eigenvalue > 1" rule, the number of principal components to extract is equal to the number of eigenvalues greater than 1.
+# Calculate eigenvalues
+eigenvalues <- mtcars.pca$sdev^2
+eigenvalues
+
+# Number of PCs with eigenvalues > 1
+sum(eigenvalues > 1)
+
+
+```
+
+```{r}
+# d) The total variance is equal to the number of variables used in PCA (which is 9). This is because the total variance of the standardized data is the sum of the variances (all 1 in standardized data), which adds up to the number of variables.
+
+# Calculate total variance
+total_variance <- sum(eigenvalues)
+total_variance
+
+```
+
+```{r}
+# e) The proportion of variance explained by the number of components selected according to the "Eigenvalue > 1" rule can be computed as follows:
+
+# Proportion of variance explained by selected components
+explained_variance <- sum(eigenvalues[eigenvalues > 1]) / total_variance
+explained_variance
+
+```
+
+```{r}
+# f) Biplot for PC1 and PC2
+biplot(mtcars.pca, choices = c(1, 2), main = "Biplot: PC1 vs PC2")
+
+```
+
+```{r}
+# h) Scree plot with type 'lines'
+screeplot(mtcars.pca, type = "lines", main = "Scree Plot")
+
+# Answer: According to the scree plot, you should extract components up to the "elbow point," where the variance explained starts to level off. This number of components should be compared with the number of components extracted using the "Eigenvalue > 1" rule.
+```
+
+# Conclusion 
+
+```{r}
+# The PCA analysis of the mtcars dataset provides insights into the variance structure of the data, allowing us to reduce the dimensionality and visualize how the observations and features are related. The scree plot and eigenvalue rule help determine the optimal number of principal components to retain.
+
+```
